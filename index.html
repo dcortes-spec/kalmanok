@@ -1,0 +1,373 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Tablas de Kalmanok</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: hoja de cálculo técnica — columna de datos a la izquierda, resultados y paso a paso a la derecha; tabla completa abajo */
+:root{
+  --bg:#f3f5f6; --paper:#ffffff; --ink:#18232b; --muted:#5b6b75; --line:#d5dde2; --grid:#e8edf0;
+  --accent:#1f5f8b; --accent-soft:#e2eef6; --neg:#a3361f; --pos:#22663f; --warn:#8a5a00; --warn-soft:#fbf1dc;
+  --hatch:#18232b;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11181d; --paper:#18222a; --ink:#e3eaee; --muted:#93a4ae; --line:#2c3a44; --grid:#212d35;
+  --accent:#6fb3e0; --accent-soft:#1d3444; --neg:#f08c74; --pos:#79c99a; --warn:#f0c46a; --warn-soft:#3a2f17; --hatch:#e3eaee; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11181d; --paper:#18222a; --ink:#e3eaee; --muted:#93a4ae; --line:#2c3a44; --grid:#212d35;
+  --accent:#6fb3e0; --accent-soft:#1d3444; --neg:#f08c74; --pos:#79c99a; --warn:#f0c46a; --warn-soft:#3a2f17; --hatch:#e3eaee; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:8px 24px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+h1{font-family:var(--f-display);font-weight:700;font-size:2.4rem;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:.9rem;max-width:60ch}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.25rem;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;min-width:0}
+.main{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:20px;min-width:0}
+
+/* Selector de tablas */
+.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px}
+.tbtn{appearance:none;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:8px 6px 6px;cursor:pointer;display:grid;justify-items:center;gap:2px;font:inherit}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.tbtn b{font-family:var(--f-display);font-size:1.05rem;font-weight:600;letter-spacing:.02em}
+.tbtn svg{width:58px;height:58px}
+.tdesc{margin:10px 0 0;font-size:.88rem;color:var(--muted)}
+
+/* Formulario */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:grid;gap:4px;font-size:.82rem;color:var(--muted);font-weight:500}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:5px;background:var(--bg);overflow:hidden}
+.inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.inp input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-mono);font-size:1.05rem;padding:8px 10px;outline:none}
+.inp span{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);padding-right:10px;white-space:nowrap}
+.span2{grid-column:1/-1}
+.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{flex:1;appearance:none;border:0;background:transparent;color:var(--ink);font:inherit;font-size:.82rem;padding:7px 6px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+details.loads{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+details.loads summary{cursor:pointer;font-size:.85rem;color:var(--accent);font-weight:500}
+.loadgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.combo{font-family:var(--f-mono);font-size:.82rem;color:var(--muted);grid-column:1/-1;display:grid;gap:2px}
+.combo .win{color:var(--ink);font-weight:600}
+.small{font-size:.8rem;color:var(--muted)}
+button.link{appearance:none;border:0;background:none;color:var(--accent);font:inherit;font-size:.82rem;padding:0;cursor:pointer;text-decoration:underline}
+
+/* Esquema */
+.scheme{display:flex;justify-content:center;padding:6px 0}
+.scheme svg{width:100%;max-width:300px;height:auto}
+
+/* Resultados */
+.summary{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;margin-bottom:14px}
+.kv{display:grid}
+.kv .v{font-family:var(--f-mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-family:var(--f-mono);font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.res{border:1px solid var(--line);border-radius:5px;padding:10px 12px;display:grid;gap:2px;background:var(--paper)}
+.res .sym{font-family:var(--f-display);font-size:1.35rem;font-weight:600;line-height:1}
+.res .sym sub{font-size:.65em} .res .sym sup{font-size:.6em;color:var(--neg)}
+.res .coef{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.res .val{font-family:var(--f-mono);font-size:1.2rem;font-weight:600;font-variant-numeric:tabular-nums}
+.res .unit{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.res.neg .val{color:var(--neg)}
+.res .what{font-size:.75rem;color:var(--muted);line-height:1.3}
+.alert{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:5px;padding:10px 12px;font-size:.88rem}
+.alert b{color:var(--warn)}
+.note{font-size:.82rem;color:var(--muted);margin:12px 0 0}
+
+/* Paso a paso */
+ol.steps{margin:0;padding-left:1.3em;display:grid;gap:10px}
+ol.steps li{padding-left:4px}
+ol.steps li::marker{font-family:var(--f-display);font-weight:700;color:var(--accent)}
+.math{font-family:var(--f-mono);font-size:.86rem;background:var(--bg);border:1px solid var(--grid);border-radius:4px;padding:6px 9px;margin-top:4px;overflow-x:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* Tabla completa */
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-family:var(--f-mono);font-size:.82rem;font-variant-numeric:tabular-nums}
+th,td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-family:var(--f-display);font-size:1rem;font-weight:600;color:var(--ink);border-bottom:2px solid var(--ink);position:sticky;top:0;background:var(--paper)}
+th sub{font-size:.7em} th sup{font-size:.65em}
+td:first-child,th:first-child{text-align:left}
+tr.half td{background:var(--grid);font-family:var(--f-display);font-size:.9rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left}
+tr.hit td{background:var(--accent-soft);color:var(--ink);font-weight:600}
+tr.hit td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+td.fix{position:relative;text-decoration:underline dotted var(--warn);text-underline-offset:3px;cursor:help}
+td.fix::after{content:"*";color:var(--warn);margin-left:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8rem;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:22px;height:10px;vertical-align:middle;margin-right:6px}
+footer{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+@media (prefers-reduced-motion:no-preference){.res{transition:border-color .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Cálculo estructural II · Losas cruzadas</div>
+      <h1>Tablas de Kalmanok</h1>
+    </div>
+    <p>Ingresá las luces, elegí el tipo de apoyo y la app busca la fila, lee los coeficientes y calcula momentos y reacciones mostrando cada paso.</p>
+  </header>
+
+  <div class="main">
+    <div class="col">
+      <section class="panel" aria-labelledby="h-datos">
+        <h2 id="h-datos">1 · Datos</h2>
+        <div class="fields">
+          <label for="lx">Luz LX
+            <div class="inp"><input id="lx" inputmode="decimal" value="4,50" autocomplete="off"><span>m</span></div>
+          </label>
+          <label for="ly">Luz LY
+            <div class="inp"><input id="ly" inputmode="decimal" value="5,00" autocomplete="off"><span>m</span></div>
+          </label>
+          <label for="qu" class="span2"><span>Carga última q<sub>u</sub></span>
+            <div class="inp"><input id="qu" inputmode="decimal" value="8,4452" autocomplete="off"><span>kN/m²</span></div>
+          </label>
+          <div class="span2" style="display:grid;gap:4px">
+            <span class="small" style="font-weight:500">Lectura de la tabla</span>
+            <div class="seg" role="group" aria-label="Lectura de la tabla">
+              <button type="button" id="m-round" aria-pressed="true">Redondear a 0,05</button>
+              <button type="button" id="m-interp" aria-pressed="false">Interpolar</button>
+            </div>
+          </div>
+        </div>
+        <details class="loads" id="loads">
+          <summary>Calcular q<sub>u</sub> desde D y L</summary>
+          <div class="loadgrid">
+            <label for="qd">Carga permanente D
+              <div class="inp"><input id="qd" inputmode="decimal" value="4,371" autocomplete="off"><span>kN/m²</span></div>
+            </label>
+            <label for="ql">Sobrecarga L
+              <div class="inp"><input id="ql" inputmode="decimal" value="2" autocomplete="off"><span>kN/m²</span></div>
+            </label>
+            <div class="combo" id="combo"></div>
+            <div><button type="button" class="link" id="useU">Usar el mayor como q<sub>u</sub></button></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="h-tabla">
+        <h2 id="h-tabla">2 · Tipo de losa</h2>
+        <div class="tables" id="tables"></div>
+        <p class="tdesc" id="tdesc"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-esq">
+        <h2 id="h-esq">Esquema a escala</h2>
+        <div class="scheme" id="scheme"></div>
+        <p class="note" id="orient"></p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="h-res">
+        <h2 id="h-res">3 · Resultados</h2>
+        <div id="resbox"></div>
+      </section>
+      <section class="panel" aria-labelledby="h-pasos">
+        <h2 id="h-pasos">Paso a paso</h2>
+        <div id="steps"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel" aria-labelledby="h-full">
+    <h2 id="h-full">Tabla completa</h2>
+    <div class="tscroll" id="full"></div>
+    <div class="legend">
+      <span><i style="background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)"></i>Fila usada (o filas entre las que se interpola)</span>
+      <span><b style="color:var(--warn)">*</b> Valor corregido respecto del Excel (pasá el cursor para ver el original)</span>
+    </div>
+  </section>
+
+  <footer>
+    Convención usada: M = coef · q<sub>u</sub> · L<sub>menor</sub>² [kN·m/m] y R = coef · q<sub>u</sub> · L<sub>menor</sub> [kN/m]. Superíndice <sup>e</sup> = borde empotrado (momento negativo).
+    Los momentos M<sub>x</sub> actúan en la dirección de LX; las reacciones R<sub>x</sub> / R<sub>y</sub> son las de los bordes paralelos a X / Y. Verificá siempre con la tabla impresa de la cátedra.
+  </footer>
+</div>
+
+<script>
+const DATA={"26":{"h":["Mx","My","Rx","Ry"],"rows":[[0.5,0.0965,0.0174,0.269,0.731],[0.55,0.0892,0.021,0.268,0.641],[0.6,0.082,0.0243,0.267,0.566],[0.65,0.075,0.0273,0.266,0.502],[0.7,0.0683,0.0298,0.265,0.45],[0.75,0.0619,0.0318,0.263,0.404],[0.8,0.056,0.0334,0.261,0.364],[0.85,0.0506,0.0348,0.259,0.33],[0.9,0.0456,0.0359,0.256,0.3],[0.95,0.041,0.0365,0.253,0.274],[1,0.0368,0.0368,0.25,0.25],[0.95,0.0365,0.041,0.274,0.253],[0.9,0.0359,0.0456,0.3,0.256],[0.85,0.0348,0.0506,0.33,0.259],[0.8,0.0334,0.056,0.364,0.261],[0.75,0.0318,0.0619,0.404,0.263],[0.7,0.0298,0.0683,0.45,0.265],[0.65,0.0273,0.075,0.502,0.266],[0.6,0.0243,0.082,0.566,0.267],[0.55,0.021,0.0892,0.641,0.268],[0.5,0.0174,0.0965,0.731,0.269]]},"27":{"h":["Mxe","Mx","My","Rx","Rye","Ry"],"rows":[[0.5,-0.1214,0.0584,0.006,0.169,1.049,0.613],[0.55,-0.1188,0.0562,0.0083,0.168,0.947,0.545],[0.6,-0.1159,0.0538,0.0105,0.167,0.845,0.487],[0.65,-0.1126,0.0512,0.0127,0.167,0.769,0.437],[0.7,-0.1089,0.0485,0.0149,0.166,0.702,0.394],[0.75,-0.105,0.0457,0.0168,0.166,0.643,0.36],[0.8,-0.1008,0.0428,0.0187,0.165,0.591,0.329],[0.85,-0.0965,0.04,0.0205,0.165,0.545,0.302],[0.9,-0.0922,0.0372,0.0221,0.165,0.504,0.278],[0.95,-0.088,0.0345,0.0234,0.165,0.467,0.255],[1,-0.0839,0.0318,0.0243,0.166,0.433,0.235],[0.95,-0.0881,0.0327,0.0282,0.186,0.44,0.24],[0.9,-0.0924,0.033,0.0323,0.209,0.449,0.245],[0.85,-0.0967,0.0328,0.0369,0.234,0.46,0.249],[0.8,-0.1011,0.0324,0.0423,0.263,0.471,0.253],[0.75,-0.1055,0.0319,0.0485,0.298,0.482,0.257],[0.7,-0.1096,0.0309,0.0553,0.339,0.492,0.26],[0.65,-0.1133,0.0292,0.0627,0.388,0.501,0.262],[0.6,-0.1165,0.0269,0.0707,0.447,0.508,0.264],[0.55,-0.1192,0.024,0.0792,0.519,0.514,0.266],[0.5,-0.1215,0.0204,0.088,0.606,0.52,0.268]]},"28":{"h":["Mxe","Mx","My","Rx","Ry"],"rows":[[0.5,-0.0845,0.0414,0.0017,0.098,0.902],[0.55,-0.0845,0.0408,0.0029,0.097,0.812],[0.6,-0.0837,0.04,0.0043,0.096,0.737],[0.65,-0.0828,0.0391,0.0058,0.097,0.673],[0.7,-0.0816,0.038,0.0073,0.097,0.617],[0.75,-0.0801,0.0366,0.0088,0.098,0.569],[0.8,-0.0784,0.035,0.0103,0.098,0.527],[0.85,-0.0765,0.0335,0.0119,0.099,0.49],[0.9,-0.0744,0.0319,0.0134,0.099,0.457],[0.95,-0.0722,0.0307,0.0147,0.1,0.427],[1,-0.0698,0.0285,0.0158,0.102,0.398],[0.95,-0.0745,0.0297,0.0189,0.115,0.412],[0.9,-0.0796,0.0307,0.0225,0.13,0.426],[0.85,-0.0849,0.0314,0.0267,0.148,0.441],[0.8,-0.0902,0.0318,0.0326,0.17,0.455],[0.75,-0.0957,0.032,0.0374,0.198,0.469],[0.7,-0.1011,0.0319,0.0442,0.232,0.482],[0.65,-0.1063,0.031,0.0519,0.274,0.495],[0.6,-0.1111,0.0292,0.0604,0.326,0.507],[0.55,-0.1154,0.0266,0.0697,0.391,0.518],[0.5,-0.1191,0.0234,0.0799,0.472,0.528]]},"29":{"h":["Mxe","Mye","Mx","My","Rxe","Rx","Rye","Ry"],"rows":[[0.5,-0.1177,-0.0782,0.056,0.0079,0.35,0.157,0.967,0.526],[0.55,-0.1136,-0.0779,0.0529,0.0105,0.35,0.158,0.849,0.458],[0.6,-0.1093,-0.0776,0.0496,0.013,0.35,0.158,0.756,0.403],[0.65,-0.1047,-0.0773,0.0462,0.0153,0.35,0.159,0.67,0.356],[0.7,-0.0996,-0.0768,0.0426,0.0171,0.35,0.159,0.604,0.315],[0.75,-0.094,-0.0759,0.039,0.0188,0.349,0.16,0.545,0.279],[0.8,-0.0882,-0.0746,0.0355,0.0203,0.348,0.161,0.493,0.248],[0.85,-0.0825,-0.0731,0.0322,0.0216,0.346,0.162,0.447,0.222],[0.9,-0.0773,-0.0714,0.0291,0.0226,0.344,0.163,0.406,0.2],[0.95,-0.0724,-0.0696,0.0262,0.0232,0.341,0.163,0.37,0.18],[1,-0.0677,-0.0677,0.0234,0.0234,0.338,0.162,0.338,0.162],[0.95,-0.0696,-0.0724,0.0232,0.0262,0.37,0.18,0.341,0.163],[0.9,-0.0714,-0.0773,0.0226,0.0291,0.406,0.2,0.344,0.163],[0.85,-0.0731,-0.0825,0.0216,0.0322,0.447,0.222,0.346,0.162],[0.8,-0.0746,-0.0882,0.0203,0.0355,0.493,0.248,0.348,0.161],[0.75,-0.0759,-0.094,0.0188,0.039,0.545,0.279,0.349,0.16],[0.7,-0.0768,-0.0996,0.0171,0.0426,0.604,0.315,0.35,0.159],[0.65,-0.0773,-0.1047,0.0153,0.0462,0.67,0.356,0.35,0.159],[0.6,-0.0776,-0.1093,0.013,0.0496,0.756,0.403,0.35,0.158],[0.55,-0.0779,-0.1136,0.0105,0.0529,0.849,0.458,0.35,0.158],[0.5,-0.0782,-0.1177,0.0079,0.056,0.967,0.526,0.35,0.157]]},"30":{"h":["Mxe","Mye","Mx","My","Rxe","Rx","Rye"],"rows":[[0.5,-0.0836,-0.0563,0.0409,0.0028,0.254,0.1,0.823],[0.55,-0.0826,-0.0564,0.0398,0.0041,0.254,0.1,0.736],[0.6,-0.0813,-0.0566,0.0385,0.0059,0.255,0.099,0.657],[0.65,-0.0796,-0.0569,0.037,0.0075,0.257,0.099,0.591],[0.7,-0.0774,-0.0572,0.0352,0.0091,0.259,0.1,0.535],[0.75,-0.0748,-0.0571,0.0333,0.0107,0.26,0.1,0.487],[0.8,-0.072,-0.0568,0.0313,0.0123,0.261,0.101,0.445],[0.85,-0.0691,-0.0564,0.0292,0.0138,0.262,0.101,0.408],[0.9,-0.066,-0.056,0.027,0.0151,0.263,0.102,0.374],[0.95,-0.0628,-0.0556,0.0249,0.0161,0.264,0.103,0.343],[1,-0.0596,-0.0551,0.0228,0.0167,0.265,0.105,0.315],[0.95,-0.0626,-0.0599,0.023,0.0193,0.293,0.12,0.32],[0.9,-0.0655,-0.0652,0.0231,0.0222,0.325,0.136,0.325],[0.85,-0.0685,-0.071,0.0229,0.0254,0.362,0.154,0.33],[0.8,-0.0706,-0.0773,0.0224,0.0289,0.405,0.175,0.334],[0.75,-0.0727,-0.0839,0.0214,0.0327,0.456,0.202,0.337],[0.7,-0.0743,-0.0907,0.0198,0.0368,0.515,0.235,0.34],[0.65,-0.0755,-0.0978,0.0177,0.0411,0.584,0.274,0.342],[0.6,-0.0765,-0.1046,0.0153,0.0452,0.662,0.32,0.343],[0.55,-0.0774,-0.1101,0.0127,0.0492,0.752,0.375,0.344],[0.5,-0.0782,-0.114,0.0098,0.0535,0.868,0.442,0.345]]},"31":{"h":["Mxe","Mye","Mx","My","Rx","Ry"],"rows":[[0.5,-0.0826,-0.056,0.0401,0.0038,0.241,0.759],[0.55,-0.0806,-0.0561,0.0385,0.0055,0.242,0.667],[0.6,-0.0784,-0.0562,0.0367,0.0076,0.244,0.589],[0.65,-0.0759,-0.0565,0.0346,0.0096,0.247,0.522],[0.7,-0.0731,-0.0568,0.0322,0.0114,0.249,0.466],[0.75,-0.0698,-0.0564,0.0297,0.0129,0.25,0.417],[0.8,-0.0661,-0.0558,0.0271,0.0143,0.251,0.374],[0.85,-0.062,-0.055,0.0246,0.0156,0.251,0.337],[0.9,-0.058,-0.054,0.0222,0.0167,0.251,0.305],[0.95,-0.0543,-0.0527,0.0198,0.0173,0.251,0.276],[1,-0.0511,-0.0511,0.0176,0.0176,0.25,0.25],[0.95,-0.0527,-0.0543,0.0173,0.0198,0.276,0.251],[0.9,-0.054,-0.058,0.0167,0.0222,0.305,0.251],[0.85,-0.055,-0.062,0.0156,0.0246,0.337,0.251],[0.8,-0.0558,-0.0661,0.0143,0.0271,0.374,0.251],[0.75,-0.0564,-0.0698,0.0129,0.0297,0.417,0.25],[0.7,-0.0568,-0.0731,0.0114,0.0322,0.466,0.249],[0.65,-0.0565,-0.0759,0.0096,0.0346,0.522,0.247],[0.6,-0.0562,-0.0784,0.0076,0.0367,0.589,0.244],[0.55,-0.0561,-0.0806,0.0055,0.0385,0.667,0.242],[0.5,-0.056,-0.0826,0.0038,0.0401,0.759,0.241]]},"32":{"h":["Mx","My"],"rows":[[0.3,0.01,0.0114],[0.35,0.0126,0.015],[0.4,0.0151,0.0194],[0.45,0.0174,0.0243],[0.5,0.0192,0.0295],[0.55,0.0206,0.0346],[0.6,0.0217,0.0396],[0.65,0.0224,0.0446],[0.7,0.0228,0.0493],[0.75,0.023,0.0538],[0.8,0.0231,0.0581],[0.85,0.023,0.0622],[0.9,0.0228,0.0661],[0.95,0.0223,0.0698],[1,0.0216,0.0733],[1.1,0.0204,0.0797],[1.2,0.0189,0.0853],[1.3,0.0175,0.0902],[1.4,0.0161,0.0944],[1.5,0.0148,0.0979],[1.75,0.0116,0.1051],[2,0.0088,0.1106]]}};
+// [tabla, índice de fila, índice de columna, valor original del Excel]
+const FIXES=[[27,14,1,-0.01011],[27,9,3,0.234],[27,12,3,0.323],[30,12,1,-0.655]];
+// Bordes: l=izquierdo, r=derecho, t=superior, b=inferior · s=apoyado, f=empotrado, n=libre
+const META={
+  26:{e:{l:'s',r:'s',t:'s',b:'s'},d:'Cuatro bordes simplemente apoyados.',o:'Simétrica: LX y LY se pueden asignar a cualquiera de los lados.'},
+  27:{e:{l:'f',r:'s',t:'s',b:'s'},d:'Un borde empotrado (el izquierdo, paralelo a LY) y tres apoyados.',o:'LX es la luz perpendicular al borde empotrado.'},
+  28:{e:{l:'f',r:'f',t:'s',b:'s'},d:'Dos bordes opuestos empotrados (paralelos a LY) y dos apoyados.',o:'LX es la luz entre los dos bordes empotrados.'},
+  29:{e:{l:'f',r:'s',t:'s',b:'f'},d:'Dos bordes adyacentes empotrados y dos apoyados.',o:'Simétrica: LX y LY se pueden asignar a cualquiera de los lados.'},
+  30:{e:{l:'f',r:'f',t:'s',b:'f'},d:'Tres bordes empotrados y uno apoyado (paralelo a LX).',o:'LX es la luz paralela al borde apoyado.'},
+  31:{e:{l:'f',r:'f',t:'f',b:'f'},d:'Cuatro bordes empotrados.',o:'Simétrica: LX y LY se pueden asignar a cualquiera de los lados.'},
+  32:{e:{l:'s',r:'s',t:'n',b:'s'},d:'Tres bordes apoyados y uno libre (paralelo a LX).',o:'LX es la luz paralela al borde libre. Esta tabla no se pliega: la relación es siempre LX/LY, de 0,3 a 2.'}
+};
+const DESC={Mx:'Momento de tramo en X',My:'Momento de tramo en Y',Mxe:'Momento de empotramiento en X',Mye:'Momento de empotramiento en Y',
+  Rx:'Reacción en borde apoyado ∥ X',Ry:'Reacción en borde apoyado ∥ Y',Rxe:'Reacción en borde empotrado ∥ X',Rye:'Reacción en borde empotrado ∥ Y'};
+// En las tablas 26 y 28, Rx/Ry pueden corresponder a bordes empotrados según el tipo; la descripción genérica lo aclara abajo.
+const state={t:31,mode:'round'};
+
+const $=id=>document.getElementById(id);
+const num=s=>{s=String(s).trim().replace(/\s/g,'');if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.')}const v=parseFloat(s);return isFinite(v)?v:NaN};
+const fmt=(v,d=3)=>isFinite(v)?v.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+const fmtC=v=>isFinite(v)?v.toLocaleString('es-AR',{minimumFractionDigits:4,maximumFractionDigits:5}):'—';
+const symH=h=>{const e=h.endsWith('e');const b=h[0], s=h[1];return `${b}<sub>${s}</sub>${e?'<sup>e</sup>':''}`};
+const symT=h=>{const e=h.endsWith('e');return `${h[0]}${h[1]}${e?'ᵉ':''}`};
+const isFix=(t,i,j)=>FIXES.find(f=>f[0]==t&&f[1]==i&&f[2]==j);
+
+function plateSVG(edges,w,h,opts={}){
+  const pad=opts.pad??18, W=w+pad*2+(opts.dim?34:0), H=h+pad*2+(opts.dim?30:0);
+  const x0=pad, y0=pad, x1=pad+w, y1=pad+h, hl=opts.hatch??7, st=opts.stroke??2;
+  let g='';
+  const hatch=(ax,ay,bx,by,nx,ny)=>{ // líneas de rayado del lado exterior
+    const len=Math.hypot(bx-ax,by-ay), n=Math.max(3,Math.round(len/(opts.step??6)));
+    let p='';for(let k=0;k<=n;k++){const px=ax+(bx-ax)*k/n, py=ay+(by-ay)*k/n;
+      p+=`M${px.toFixed(1)} ${py.toFixed(1)} l${(nx*hl+(ny?-hl*.7:0)).toFixed(1)} ${(ny*hl+(nx?hl*.7:0)).toFixed(1)} `;}
+    return `<path d="${p}" stroke="var(--hatch)" stroke-width="1" fill="none"/>`};
+  const side=(k,ax,ay,bx,by,nx,ny)=>{const t=edges[k];
+    if(t==='f'){g+=hatch(ax,ay,bx,by,nx,ny)+`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--ink)" stroke-width="${st+0.6}"/>`}
+    else if(t==='n'){g+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--ink)" stroke-width="${st}" stroke-dasharray="6 4"/>`}
+    else{g+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--ink)" stroke-width="${st}"/>`}};
+  g+=`<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="var(--accent-soft)"/>`;
+  side('l',x0,y0,x0,y1,-1,0); side('r',x1,y0,x1,y1,1,0); side('t',x0,y0,x1,y0,0,-1); side('b',x0,y1,x1,y1,0,1);
+  if(opts.dim){
+    const yd=y1+pad+8, xd=x1+pad+10;
+    g+=`<g stroke="var(--muted)" stroke-width="1"><line x1="${x0}" y1="${yd}" x2="${x1}" y2="${yd}"/><line x1="${x0}" y1="${yd-5}" x2="${x0}" y2="${yd+5}"/><line x1="${x1}" y1="${yd-5}" x2="${x1}" y2="${yd+5}"/>
+      <line x1="${xd}" y1="${y0}" x2="${xd}" y2="${y1}"/><line x1="${xd-5}" y1="${y0}" x2="${xd+5}" y2="${y0}"/><line x1="${xd-5}" y1="${y1}" x2="${xd+5}" y2="${y1}"/></g>
+      <text x="${(x0+x1)/2}" y="${yd+18}" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono,monospace" font-size="12">LX = ${opts.lx}</text>
+      <text x="${xd+8}" y="${(y0+y1)/2}" fill="var(--ink)" font-family="IBM Plex Mono,monospace" font-size="12" transform="rotate(90 ${xd+8} ${(y0+y1)/2})" text-anchor="middle">LY = ${opts.ly}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.label||'Esquema de losa'}">${g}</svg>`;
+}
+
+function buildPicker(){
+  $('tables').innerHTML=Object.keys(DATA).map(t=>`<button type="button" class="tbtn" data-t="${t}" aria-pressed="${t==state.t}">${plateSVG(META[t].e,30,30,{pad:12,hatch:5,step:5,stroke:1.6,label:'Tabla '+t})}<b>Tabla ${t}</b></button>`).join('');
+  $('tables').querySelectorAll('.tbtn').forEach(b=>b.onclick=()=>{state.t=+b.dataset.t;$('tables').querySelectorAll('.tbtn').forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+}
+
+function lookup(t,LX,LY,mode){
+  const D=DATA[t], rows=D.rows; let ratio,half,Lm,idx=[],w=0,coef=[],err=null,raw;
+  if(t==32){
+    raw=LX/LY; ratio=raw; half='LX/LY'; Lm=Math.min(LX,LY);
+    const xs=rows.map(r=>r[0]);
+    if(raw<0.3-1e-9||raw>2+1e-9){err=`La relación LX/LY = ${fmt(raw,3)} está fuera del rango de la Tabla 32 (0,30 a 2,00).`;return{err,raw,half,Lm}}
+    if(mode==='round'){let best=0;xs.forEach((x,i)=>{if(Math.abs(x-raw)<Math.abs(xs[best]-raw)-1e-12)best=i});idx=[best];ratio=xs[best];coef=rows[best].slice(1)}
+    else{let i=xs.findIndex(x=>x>=raw-1e-12);if(Math.abs(xs[i]-raw)<1e-9){idx=[i];coef=rows[i].slice(1)}else{const a=i-1;w=(raw-xs[a])/(xs[i]-xs[a]);idx=[a,i];coef=rows[a].slice(1).map((v,j)=>v+(rows[i][j+1]-v)*w)}}
+    return{raw,ratio,half,Lm,idx,w,coef};
+  }
+  const upper=LX<=LY; raw=upper?LX/LY:LY/LX; half=upper?'LX/LY':'LY/LX'; Lm=upper?LX:LY;
+  if(raw<0.5-1e-9){err=`La relación ${half} = ${fmt(raw,3)} es menor que 0,50. La losa trabaja prácticamente en una dirección: calculala como losa unidireccional (la tabla no aplica).`;return{err,raw,half,Lm}}
+  // índices de la mitad usada: superior 0..10 (0,50→1,00); inferior 10..20 (1,00→0,50)
+  const ids=upper?[0,1,2,3,4,5,6,7,8,9,10]:[20,19,18,17,16,15,14,13,12,11,10]; // ordenados por relación creciente
+  const at=k=>ids[k];
+  if(mode==='round'){
+    const r=Math.round(raw/0.05)*0.05; const k=Math.round((r-0.5)/0.05); idx=[at(k)]; ratio=rows[at(k)][0]; coef=rows[at(k)].slice(1);
+  }else{
+    const pos=(raw-0.5)/0.05, k=Math.floor(pos+1e-9);
+    if(Math.abs(pos-Math.round(pos))<1e-9){const kk=Math.round(pos);idx=[at(kk)];coef=rows[at(kk)].slice(1)}
+    else{w=pos-k;const a=at(k),b=at(k+1);idx=[a,b];coef=rows[a].slice(1).map((v,j)=>v+(rows[b][j+1]-v)*w)}
+    ratio=raw;
+  }
+  return{raw,ratio,half,Lm,idx,w,coef};
+}
+
+function describe(t,h){
+  const m=META[t].e;
+  if(h==='Rx'||h==='Ry'){ // borde paralelo a X = t/b ; paralelo a Y = l/r
+    const sides=h==='Rx'?[m.t,m.b]:[m.l,m.r];
+    const allF=sides.every(s=>s==='f'), anyF=sides.some(s=>s==='f');
+    if(allF) return `Reacción en borde${h==='Rx'?'s':'s'} empotrado${'s'} ∥ ${h[1].toUpperCase()}`;
+    if(anyF) return `Reacción en borde apoyado ∥ ${h[1].toUpperCase()}`;
+    return `Reacción en bordes ∥ ${h[1].toUpperCase()}`;
+  }
+  return DESC[h];
+}
+
+function render(){
+  const t=state.t, LX=num($('lx').value), LY=num($('ly').value), qu=num($('qu').value);
+  $('m-round').setAttribute('aria-pressed',state.mode==='round');$('m-interp').setAttribute('aria-pressed',state.mode!=='round');
+  $('tdesc').innerHTML=`<b>Tabla ${t}.</b> ${META[t].d}`;
+  // combinaciones de carga
+  const D=num($('qd').value), L=num($('ql').value), U1=1.4*D, U2=1.2*D+1.6*L;
+  $('combo').innerHTML=`<span class="${U1>=U2?'win':''}">U1 = 1,4·D = ${fmt(U1,4)} kN/m²</span><span class="${U2>U1?'win':''}">U2 = 1,2·D + 1,6·L = ${fmt(U2,4)} kN/m²</span>`;
+  // esquema
+  const ok=LX>0&&LY>0;
+  if(ok){const s=200/Math.max(LX,LY);$('scheme').innerHTML=plateSVG(META[t].e,Math.max(LX*s,24),Math.max(LY*s,24),{pad:20,dim:true,lx:fmt(LX,2)+' m',ly:fmt(LY,2)+' m',hatch:9,step:8,label:`Losa Tabla ${t}, LX ${fmt(LX,2)} m por LY ${fmt(LY,2)} m`})}
+  else $('scheme').innerHTML='';
+  $('orient').innerHTML=`<b>Orientación:</b> ${META[t].o}`;
+  if(!(LX>0&&LY>0&&qu>0)){
+    $('resbox').innerHTML=`<div class="alert"><b>Faltan datos.</b> Ingresá LX, LY y q<sub>u</sub> como números positivos (podés usar coma decimal).</div>`;$('steps').innerHTML='';renderFull(t,[]);return}
+  const r=lookup(t,LX,LY,state.mode);
+  if(r.err){$('resbox').innerHTML=`<div class="alert"><b>Fuera de tabla.</b> ${r.err}</div>`;$('steps').innerHTML='';renderFull(t,[]);return}
+  const H=DATA[t].h, Lm=r.Lm;
+  const vals=H.map((h,j)=>{const c=r.coef[j];const isM=h[0]==='M';return{h,c,isM,v:isM?c*qu*Lm*Lm:c*qu*Lm}});
+  const rowTxt=r.idx.length===1?`${fmt(DATA[t].rows[r.idx[0]][0],2)}`:`entre ${fmt(DATA[t].rows[r.idx[0]][0],2)} y ${fmt(DATA[t].rows[r.idx[1]][0],2)}`;
+  const fixed=r.idx.some(i=>H.some((_,j)=>isFix(t,i,j+1)));
+  $('resbox').innerHTML=`
+    <div class="summary">
+      <div class="kv"><span class="eyebrow">Relación ${r.half}</span><span class="v">${fmt(r.raw,3)}</span></div>
+      <div class="kv"><span class="eyebrow">Fila de tabla</span><span class="v">${rowTxt}</span></div>
+      <div class="kv"><span class="eyebrow">L menor</span><span class="v">${fmt(Lm,2)} m</span></div>
+      <div class="kv"><span class="eyebrow">Columna</span><span class="chip">${t==32?'lx/ly (única)':(r.half==='LX/LY'?'lx/ly · mitad superior':'ly/lx · mitad inferior')}</span></div>
+    </div>
+    <div class="results">${vals.map(o=>`<div class="res ${o.v<0?'neg':''}">
+      <span class="sym">${symH(o.h)}</span>
+      <span class="what">${describe(t,o.h)}</span>
+      <span class="coef">coef = ${fmtC(o.c)}</span>
+      <span class="val">${fmt(o.v,2)}</span>
+      <span class="unit">${o.isM?'kN·m/m':'kN/m'}</span></div>`).join('')}</div>
+    ${t==32?`<p class="note alert" style="margin-top:12px"><b>Atención Tabla 32.</b> Esta tabla va de 0,3 a 2 sin plegarse, así que la luz por la que se multiplica no es obvia. La app usa L<sub>menor</sub> como en las demás; confirmá con la cátedra si corresponde LX o LY.</p>`:''}
+    ${fixed?`<p class="note"><b style="color:var(--warn)">*</b> Esta fila incluye un valor que corregí respecto del Excel (ver tabla completa).</p>`:''}`;
+  // paso a paso
+  const ex=vals.find(o=>o.isM&&o.h.endsWith('e'))||vals[0];
+  const exR=vals.find(o=>!o.isM);
+  const rr=r.idx.length===2?DATA[t].rows:null;
+  let interpStep='';
+  if(r.idx.length===2){const a=rr[r.idx[0]],b=rr[r.idx[1]],j=H.indexOf(ex.h)+1;
+    interpStep=`<li>Como la relación cae entre dos filas, se interpola linealmente. Para ${symH(ex.h)}:
+      <div class="math">coef = ${fmtC(a[j])} + (${fmtC(b[j])} − ${fmtC(a[j])}) · ${fmt(r.w,3)} = ${fmtC(ex.c)}</div>
+      <span class="small">El factor ${fmt(r.w,3)} indica qué tan cerca está ${fmt(r.raw,3)} de la fila ${fmt(b[0],2)}.</span></li>`}
+  $('steps').innerHTML=`<ol class="steps">
+    <li>Relación de lados${t==32?' (Tabla 32 usa siempre LX/LY)':', siempre luz menor sobre luz mayor'}:
+      <div class="math">${t==32?`LX / LY = ${fmt(LX,2)} / ${fmt(LY,2)} = ${fmt(r.raw,3)}`:(r.half==='LX/LY'?`LX / LY = ${fmt(LX,2)} / ${fmt(LY,2)} = ${fmt(r.raw,3)}`:`LY / LX = ${fmt(LY,2)} / ${fmt(LX,2)} = ${fmt(r.raw,3)}`)}</div>
+      ${t==32?'':`<span class="small">${r.half==='LX/LY'?'LX ≤ LY → se entra por la columna <b>lx/ly</b> (mitad superior de la tabla).':'LX > LY → se entra por la columna <b>ly/lx</b> (mitad inferior de la tabla).'}</span>`}</li>
+    <li>${state.mode==='round'?`Se redondea al múltiplo de 0,05 más cercano (como hace la planilla): <div class="math">${fmt(r.raw,3)} → ${fmt(r.ratio,2)}</div>`:`Se ubica la relación en la tabla: queda ${rowTxt}.`}</li>
+    ${interpStep}
+    <li>Se leen los coeficientes de la fila${r.idx.length===2?' (interpolados)':''}: ${vals.map(o=>`${symH(o.h)} = ${fmtC(o.c)}`).join(' · ')}</li>
+    <li>Momentos: coeficiente × q<sub>u</sub> × L<sub>menor</sub>². Ejemplo con ${symH(ex.h)}:
+      <div class="math">${symT(ex.h)} = ${fmtC(ex.c)} × ${fmt(qu,4)} kN/m² × (${fmt(Lm,2)} m)² = ${fmt(ex.v,2)} kN·m/m</div>
+      ${ex.h.endsWith('e')?'<span class="small">El signo negativo indica momento de empotramiento (tracciona arriba, armadura superior).</span>':''}</li>
+    ${exR?`<li>Reacciones: coeficiente × q<sub>u</sub> × L<sub>menor</sub>. Ejemplo con ${symH(exR.h)}:
+      <div class="math">${symT(exR.h)} = ${fmtC(exR.c)} × ${fmt(qu,4)} kN/m² × ${fmt(Lm,2)} m = ${fmt(exR.v,2)} kN/m</div>
+      <span class="small">Es la carga por metro lineal que la losa transmite a la viga de ese borde.</span></li>`:''}
+  </ol>`;
+  renderFull(t,r.idx);
+}
+
+function renderFull(t,hits){
+  const D=DATA[t], H=D.h, cols=H.length+1;
+  const row=(r,i)=>`<tr class="${hits.includes(i)?'hit':''}"><td>${fmt(r[0],2)}</td>${r.slice(1).map((v,j)=>{const f=isFix(t,i,j+1);return `<td${f?` class="fix" title="En el Excel figura ${fmtC(f[3])}"`:''}>${fmtC(v)}</td>`}).join('')}</tr>`;
+  let body='';
+  if(t==32){body=`<tr class="half"><td colspan="${cols}">lx / ly</td></tr>`+D.rows.map(row).join('')}
+  else{body=`<tr class="half"><td colspan="${cols}">lx / ly · L menor = LX</td></tr>`+D.rows.slice(0,11).map((r,i)=>row(r,i)).join('')+
+    `<tr class="half"><td colspan="${cols}">ly / lx · L menor = LY</td></tr>`+D.rows.slice(11).map((r,i)=>row(r,i+11)).join('')}
+  $('full').innerHTML=`<table><thead><tr><th>Tabla ${t}</th>${H.map(h=>`<th>${symH(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+['lx','ly','qu','qd','ql'].forEach(id=>$(id).addEventListener('input',render));
+$('m-round').onclick=()=>{state.mode='round';render()};
+$('m-interp').onclick=()=>{state.mode='interp';render()};
+$('useU').onclick=()=>{const D=num($('qd').value),L=num($('ql').value);const U=Math.max(1.4*D,1.2*D+1.6*L);if(isFinite(U)){$('qu').value=U.toLocaleString('es-AR',{maximumFractionDigits:4});render()}};
+buildPicker();render();
+</script>
+
+</body></html>
